@@ -112,6 +112,56 @@ unchanged. A browser on the daemon machine keeps the native dialog in `auto` mod
 - Non-English locales get the English text (the strings are a stopgap, and machine
   translation would add review noise to a patch meant to be dropped).
 
+## Production on the devbox
+
+`~/open-design` on the devbox runs this branch under pm2 (`opendesign`, daemon 7456, web 8756),
+reached at https://opendesign.pessano.dev and https://devbox-vm.taild2a0ad.ts.net:8756.
+
+- It is tracked by a git dir kept **outside** the tree, `~/.open-design.git`, so neither the
+  daemon nor the agents it spawns see a `.git` folder inside the app. Use
+  `git --git-dir=$HOME/.open-design.git --work-tree=$HOME/open-design …` (alias `odgit`).
+- The install was unpacked from a tarball without `e2e/`, `docs/`, `specs/`, `.github/`, so
+  `odgit status` lists those as deleted. That's expected; the deploy script ignores them.
+- Remotes there: `origin` = this fork, `upstream` = nexu-io/open-design.
+
+Deploy a new commit of this branch (push it first):
+
+```bash
+~/open-design/scripts/fork-deploy.sh --dry-run   # what would change
+~/open-design/scripts/fork-deploy.sh             # snapshot, checkout, build, restart, health check
+~/open-design/scripts/fork-deploy.sh --rollback  # back to the pre-deploy snapshot
+```
+
+The script refuses to run while an OpenDesign run is in progress or when the tree has local
+edits. It snapshots code and build output (not `node_modules`, not `.od` data) to
+`~/backups/open-design-pre-fork` and rolls back by itself if a build or the health check fails.
+The web build needs the server stopped, so expect about a minute of downtime.
+
+## Leaving the fork (migrating back to upstream)
+
+A daily Hermes cron job (`opendesign fork exit watch`) checks upstream and pings once
+#8136 is merged and a stable release contains it, or if #6576 is closed by some other fix.
+Then, on the devbox:
+
+1. Backup: `~/opendesign-backup/sync.sh -m "before upstream migration"`.
+2. Read the upstream release notes from 0.23.1 up to the target tag `<tag>`
+   (data migrations, config changes, Node version in `.node-version`).
+3. `odgit fetch upstream --tags`
+4. Make sure no OpenDesign run is in progress, then `pm2 stop opendesign`.
+5. `odgit checkout -B upstream <tag>` (the fork's files go away with it; `FORK.md` and
+   `scripts/fork-deploy.sh` too, so copy the script to `/tmp` first if you want its rollback).
+6. `cd ~/open-design && pnpm install --frozen-lockfile && pnpm --filter @open-design/daemon build && pnpm --filter @open-design/web build`
+7. If `OD_NATIVE_FOLDER_DIALOG` or `OD_FOLDER_BROWSER_ROOTS` were added to `.env-od`,
+   remove them (fork-only).
+8. `pm2 start opendesign`, then `curl -s 127.0.0.1:7456/api/health`.
+9. From another machine, open https://opendesign.pessano.dev → Working directory →
+   Choose folder. Upstream's picker must open in the browser.
+10. Rollback if it misbehaves: `pm2 stop opendesign; odgit checkout server-folder-browser`,
+    rebuild as in step 6, `pm2 start opendesign`.
+11. When it's good: archive the fork (`gh repo archive FranP-code/open-design`), update the
+    `opendesign` skill and homelab-docker `docs/opendesign.md` (version, no fork), and remove the
+    `opendesign fork exit watch` cron job.
+
 ## Dropping this fork
 
 The patch becomes unnecessary once upstream ships nexu-io/open-design#8136 (or its
@@ -122,5 +172,5 @@ successor) and fixes #6576. Then:
 2. The endpoints `/api/folder-browser/roots`, `/api/folder-browser/list` and the
    `native`/`reason` fields of `/api/dialog/open-folder` disappear.
 3. Remove `OD_NATIVE_FOLDER_DIALOG` and `OD_FOLDER_BROWSER_ROOTS` from the daemon env
-   (pm2 ecosystem file / shell profile), and use whatever upstream documents instead.
+   (`~/open-design/.env-od` on the devbox), and use whatever upstream documents instead.
 4. Delete this file.
