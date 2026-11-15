@@ -9,6 +9,12 @@
 #   fork-deploy.sh --rollback  restore the pre-deploy snapshot and restart
 set -euo pipefail
 
+# Retired 2026-11-15: production now follows the latest upstream release + this patch, deployed by
+# ~/opendesign-backup/upgrade/od-upgrade.sh (branch devbox-<ver>). This script would put the old
+# 0.23.1 branch back, so it refuses.
+echo "fork-deploy.sh is retired: use ~/opendesign-backup/upgrade/od-upgrade.sh (see FORK.md)" >&2
+exit 1
+
 # Run from a temp copy: a rollback rewrites files in the tree this script may live in.
 if [[ "${FORK_DEPLOY_COPY:-}" != 1 ]]; then
   tmp=$(mktemp -t fork-deploy).zsh

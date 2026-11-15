@@ -1,7 +1,7 @@
 # Fork notes: server-side folder browser
 
-This fork (`FranP-code/open-design`, branch `server-folder-browser`, based on
-`devbox` = upstream `1b47e60b`, v0.23.1) carries one self-contained stopgap patch.
+This fork (`FranP-code/open-design`, branch `server-folder-browser`, now carried
+on top of each upstream release as `devbox-<ver>`) carries one self-contained stopgap patch.
 Drop it once upstream ships its own fix.
 
 ## Why
@@ -114,28 +114,14 @@ unchanged. A browser on the daemon machine keeps the native dialog in `auto` mod
 
 ## Production on the devbox
 
-`~/open-design` on the devbox runs this branch under pm2 (`opendesign`, daemon 7456, web 8756),
-reached at https://opendesign.pessano.dev and https://devbox-vm.taild2a0ad.ts.net:8756.
+`~/open-design` on the devbox runs this patch on top of the **latest upstream release**, as branch
+`devbox-<ver>` of this fork (pm2 `opendesign`, daemon 7456, web 8756,
+https://opendesign.pessano.dev). Every night `~/opendesign-backup/upgrade/od-upgrade.sh` checks for a
+new release, cherry-picks the patch commits from the deployed branch onto it, builds and tests it in a
+staging copy, then swaps it in with automatic rollback. Runbook: homelab-docker `docs/opendesign.md`
+and `upgrade/README.md` in the backup repo.
 
-- It is tracked by a git dir kept **outside** the tree, `~/.open-design.git`, so neither the
-  daemon nor the agents it spawns see a `.git` folder inside the app. Use
-  `git --git-dir=$HOME/.open-design.git --work-tree=$HOME/open-design …` (alias `odgit`).
-- The install was unpacked from a tarball without `e2e/`, `docs/`, `specs/`, `.github/`, so
-  `odgit status` lists those as deleted. That's expected; the deploy script ignores them.
-- Remotes there: `origin` = this fork, `upstream` = nexu-io/open-design.
-
-Deploy a new commit of this branch (push it first):
-
-```bash
-~/open-design/scripts/fork-deploy.sh --dry-run   # what would change
-~/open-design/scripts/fork-deploy.sh             # snapshot, checkout, build, restart, health check
-~/open-design/scripts/fork-deploy.sh --rollback  # back to the pre-deploy snapshot
-```
-
-The script refuses to run while an OpenDesign run is in progress or when the tree has local
-edits. It snapshots code and build output (not `node_modules`, not `.od` data) to
-`~/backups/open-design-pre-fork` and rolls back by itself if a build or the health check fails.
-The web build needs the server stopped, so expect about a minute of downtime.
+`scripts/fork-deploy.sh` (the first, 0.23.1-only deploy) is retired and refuses to run.
 
 ## Leaving the fork (migrating back to upstream)
 
