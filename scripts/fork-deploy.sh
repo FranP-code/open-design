@@ -51,17 +51,22 @@ cd "$OD"
 RUNS=$(curl -s -m 5 'http://127.0.0.1:7456/api/runs?status=running' | python3 -c 'import json,sys; print(len(json.load(sys.stdin).get("runs",[])))')
 [[ "$RUNS" == "0" ]] || { echo "ABORT: $RUNS OpenDesign run(s) in progress"; exit 1; }
 
-# 1. one-time: attach the outside-the-tree git dir at the commit the install was unpacked from
+# 1. one-time: attach the outside-the-tree git dir at the commit the install was unpacked from.
+#    Blobless clone: full history is ~3.6 GB, but only commits/trees are needed up front; the few
+#    file contents a checkout writes are fetched on demand.
+FRESH=
 if [[ ! -d $GD ]]; then
-  git init -q --bare "$GD"
+  git clone -q --bare --filter=blob:none "$FORK" "$GD"
   odgit config core.bare false
-  odgit remote add origin "$FORK"
+  odgit config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
   odgit remote add upstream "$UP"
   # production files that live in the tree but are not source
   printf '%s\n' '/.env-od' '/run-prod.sh' > "$GD/info/exclude"
+  odgit symbolic-ref HEAD refs/heads/installed
+  FRESH=1
 fi
-odgit fetch -q origin "$BRANCH" devbox
-odgit rev-parse -q --verify HEAD >/dev/null || odgit reset -q origin/devbox   # index = base, tree untouched
+odgit fetch -q origin
+[[ -n $FRESH ]] && odgit reset -q origin/devbox   # branch 'installed' = base, index = base, tree untouched
 TARGET=$(odgit rev-parse "origin/$BRANCH")
 
 # 2. the tree must equal HEAD (no local edits to clobber). Missing files are fine: the install
