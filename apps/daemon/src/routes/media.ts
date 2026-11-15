@@ -51,6 +51,7 @@ import path from 'node:path';
 import { assignMediaTaskBatches } from '../media/task-batches.js';
 import { mediaTaskErrorFromFailure } from '../media/task-error.js';
 import { normalizePersistedAutomationWorkspaceScope } from '../automations/workspace-scope.js';
+import { createOpenFolderDialogHandler, registerFolderBrowserRoutes } from './folder-browser.js';
 
 const LONG_MEDIA_PROXY_TIMEOUT_MS = 10 * 60 * 1000;
 const MEDIA_FILE_MTIME_TOLERANCE_MS = 1;
@@ -1014,19 +1015,16 @@ export function registerMediaRoutes(app: Express, ctx: RegisterMediaRoutesDeps) 
     }
   });
 
-  // Native OS folder picker dialog. Returns { path: string | null }.
-  app.post('/api/dialog/open-folder', async (req, res) => {
-    if (!isLocalSameOrigin(req, getResolvedPort())) {
-      return res.status(403).json({ error: 'cross-origin request rejected' });
-    }
-    try {
-      const selected = await openNativeFolderDialog();
-      res.json({ path: selected });
-    } catch (err: any) {
-      res
-        .status(500)
-        .json({ error: String(err && err.message ? err.message : err) });
-    }
+  // Native OS folder picker dialog. Returns { path: string | null }, or
+  // { path: null, native: false, reason } when the browser is remote (fork
+  // patch, see FORK.md and ./folder-browser.ts).
+  app.post('/api/dialog/open-folder', createOpenFolderDialogHandler({
+    isLocalSameOrigin: (req) => isLocalSameOrigin(req, getResolvedPort()),
+    openNativeFolderDialog,
+  }));
+  registerFolderBrowserRoutes(app, {
+    isLocalSameOrigin: (req) => isLocalSameOrigin(req, getResolvedPort()),
+    readAppConfig: () => readAppConfig(RUNTIME_DATA_DIR),
   });
 
   const handleStockSearch = async (req: any, res: any, projectId: string, grant: ToolTokenGrant | null, authorizedWorkspaceId?: string | null) => {
