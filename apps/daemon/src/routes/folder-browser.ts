@@ -283,7 +283,12 @@ export async function listFolder(
   return {
     path: real,
     root: root.path,
-    parent: real === root.path ? null : path.dirname(real),
+    // Up stays possible while the parent is inside ANY root: recent dirs are
+    // roots too, so using only the deepest match would strand the user there.
+    parent: (() => {
+      const up = path.dirname(real);
+      return up !== real && insideSomeRoot(up) && !isRefusedFolder(up) ? up : null;
+    })(),
     entries: truncated ? entries.slice(0, FOLDER_BROWSER_MAX_ENTRIES) : entries,
     truncated,
   };

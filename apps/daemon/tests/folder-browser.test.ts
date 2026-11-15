@@ -210,6 +210,18 @@ describe('GET /api/folder-browser/list', () => {
     expect(lib.body.entries.map((e: any) => e.name)).toEqual(['Other']);
   });
 
+  it('keeps Up working inside a recent dir that is also inside home', async () => {
+    const nestedRecent = path.join(home, 'Projects', 'alpha');
+    appConfig = { recentLinkedDirs: [nestedRecent] };
+    try {
+      const res = await list(nestedRecent);
+      expect(res.status).toBe(200);
+      expect(res.body.parent).toBe(path.join(home, 'Projects'));
+    } finally {
+      appConfig = {};
+    }
+  });
+
   it('returns the parent for a nested dir', async () => {
     const res = await list(path.join(home, 'Projects', 'alpha'));
     expect(res.body.parent).toBe(path.join(home, 'Projects'));
