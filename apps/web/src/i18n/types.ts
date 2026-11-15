@@ -5907,4 +5907,20 @@ export interface Dict {
   'homeInvite.invite': string;
   'homeInvite.dismiss': string;
   'homeInvite.sent': string;
+  // Fork patch (see FORK.md): server-side folder picker.
+  'serverFolderPicker.title': string;
+  'serverFolderPicker.titleFallback': string;
+  'serverFolderPicker.locations': string;
+  'serverFolderPicker.pathLabel': string;
+  'serverFolderPicker.go': string;
+  'serverFolderPicker.up': string;
+  'serverFolderPicker.showHidden': string;
+  'serverFolderPicker.loading': string;
+  'serverFolderPicker.empty': string;
+  'serverFolderPicker.truncated': string;
+  'serverFolderPicker.noRoots': string;
+  'serverFolderPicker.loadError': string;
+  'serverFolderPicker.select': string;
+  'serverFolderPicker.cancel': string;
+  'serverFolderPicker.close': string;
 }

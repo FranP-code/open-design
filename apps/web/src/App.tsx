@@ -281,6 +281,7 @@ import type {
   PromptTemplateSummary,
   SkillSummary,
 } from './types';
+import { ServerFolderPickerHost } from './components/ServerFolderPicker';
 
 type AppCreateProjectInput = Omit<CreateInput, 'metadata'> & {
   metadata?: CreateInput['metadata'];
@@ -989,6 +990,8 @@ export function App() {
       <IframeKeepAliveProvider>
         <WorkspaceMemberDirectoryPreloader />
         <WorkspaceRemovalBoundary><AppInner /></WorkspaceRemovalBoundary>
+        {/* Fork patch (see FORK.md): in-app folder picker for remote browsers. */}
+        <ServerFolderPickerHost />
       </IframeKeepAliveProvider>
     </MotionConfig>
   );

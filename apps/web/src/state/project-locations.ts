@@ -4,6 +4,7 @@ import type {
   ScanProjectLocationsResponse,
   UpdateProjectLocationsRequest,
 } from '@open-design/contracts';
+import { pickFolder } from './server-folder-picker';
 
 export async function fetchProjectLocations(): Promise<ProjectLocation[]> {
   try {
@@ -44,12 +45,7 @@ export async function scanProjectLocations(): Promise<ScanProjectLocationsRespon
 }
 
 export async function openProjectLocationFolderDialog(): Promise<string | null> {
-  try {
-    const resp = await fetch('/api/dialog/open-folder', { method: 'POST' });
-    if (!resp.ok) return null;
-    const json = (await resp.json()) as { path?: string | null };
-    return typeof json.path === 'string' && json.path.trim() ? json.path : null;
-  } catch {
-    return null;
-  }
+  // Falls back to the in-app server folder picker for remote browsers
+  // (fork patch, see FORK.md).
+  return pickFolder();
 }

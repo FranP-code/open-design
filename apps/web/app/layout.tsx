@@ -12,6 +12,8 @@ import '../src/components/TestCampaignModal.module.css';
 import '../src/components/HoverTouchpointOverlay.module.css';
 import '../src/components/ProductionCampaignBadge.module.css';
 import '../src/components/OnboardingWelcome.module.css';
+// Fork patch (see FORK.md): server folder picker, mounted from App.
+import '../src/components/ServerFolderPicker.module.css';
 
 export const metadata: Metadata = {
   title: 'OpenDesign',
