@@ -64,6 +64,7 @@ import type {
 } from '../types';
 import { removeDesignBrowserProjectCache } from '../components/design-browser-storage';
 import { boundedRequestErrorCode } from '../analytics/workspace';
+import { pickFolderOutcome } from './server-folder-picker';
 
 export type { PluginInstallOutcome } from '@open-design/contracts';
 export type { PluginShareAction } from '@open-design/contracts';
@@ -913,10 +914,12 @@ export async function duplicateProject(
 }
 
 export async function pickLocalFolderPath(): Promise<string | null> {
-  const resp = await fetch('/api/dialog/open-folder', {
-    method: 'POST',
-  });
-  if (!resp.ok) {
+  // Falls back to the in-app server folder picker for remote browsers
+  // (fork patch, see FORK.md).
+  const outcome = await pickFolderOutcome();
+  if (outcome.kind === 'network-error') throw outcome.error;
+  if (outcome.kind === 'http-error') {
+    const resp = outcome.response;
     let message = 'Could not open folder picker';
     try {
       const body = await resp.json() as { error?: unknown };
@@ -935,7 +938,7 @@ export async function pickLocalFolderPath(): Promise<string | null> {
     throw new Error(message);
   }
 
-  const body = await resp.json() as { path?: unknown };
+  const body = outcome.body;
   if (body.path == null) return null;
   if (typeof body.path !== 'string') {
     throw new Error('Could not open folder picker');

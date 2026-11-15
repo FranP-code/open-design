@@ -108,6 +108,7 @@ import {
 } from '../collab/workspace-identity';
 import { PublicFilePublishError } from '../collab/public-file-publish';
 import { clientRequestIdHeaders, withDaemonFailure } from '../analytics/failure-detail';
+import { pickFolderOutcome } from '../state/server-folder-picker';
 
 /**
  * `coalescedGet` ttl for reads that may only JOIN a request still on the wire.
@@ -3364,15 +3365,18 @@ export async function renameProjectFile(
 
 export async function openFolderDialog(options: { throwOnError?: boolean } = {}): Promise<string | null> {
   try {
-    const resp = await fetch('/api/dialog/open-folder', { method: 'POST' });
-    if (!resp.ok) {
+    // Falls back to the in-app server folder picker for remote browsers
+    // (fork patch, see FORK.md).
+    const outcome = await pickFolderOutcome();
+    if (outcome.kind === 'network-error') throw outcome.error;
+    if (outcome.kind === 'http-error') {
       if (options.throwOnError) {
-        const errorBody = await readApiErrorBody(resp);
+        const errorBody = await readApiErrorBody(outcome.response);
         throw new Error(errorBody.message);
       }
       return null;
     }
-    const data = await resp.json();
+    const data = outcome.body;
     return typeof data.path === 'string' && data.path.length > 0 ? data.path : null;
   } catch (err) {
     if (options.throwOnError) {
